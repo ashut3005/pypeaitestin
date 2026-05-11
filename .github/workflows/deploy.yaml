@@ -229,6 +229,10 @@ jobs:
     name: Test and Build Validation
     runs-on: ubuntu-latest
 
+  defaults:
+      run:
+        working-directory: frontend
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -238,6 +242,7 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
         run: npm ci
