@@ -61,11 +61,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Debug AWS variables
+        run: |
+          echo "AWS_REGION=${AWS_REGION}"
+          echo "AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}"
+          echo "ECR_REPOSITORY=${ECR_REPOSITORY}"
+
       - name: Prepare image details
         id: image
         run: |
           IMAGE_TAG="${GITHUB_SHA}"
           IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}"
+
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
+          echo "IMAGE_URI=${IMAGE_URI}" >> $GITHUB_ENV
 
           echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "image_uri=${IMAGE_URI}" >> $GITHUB_OUTPUT
@@ -97,6 +106,8 @@ jobs:
 
       - name: Build Docker image
         run: |
+          echo "Building image: ${IMAGE_URI}"
+
           docker build \
             -f frontend/Dockerfile \
             -t "${IMAGE_URI}" \
@@ -104,6 +115,8 @@ jobs:
 
       - name: Push Docker image
         run: |
+          echo "Pushing image: ${IMAGE_URI}"
+
           docker push "${IMAGE_URI}"
 
   deploy:
