@@ -1,9 +1,14 @@
 {
   "name": "simple-html-frontend",
   "version": "1.0.0",
+  "main": "server.js",
   "scripts": {
+    "start": "node server.js",
     "build": "echo Build complete",
     "test": "echo No tests",
     "lint": "echo No lint"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
   }
 }
