@@ -3,7 +3,7 @@ name: Deploy Frontend to EC2 Prod Blue Green (with Auto-Rollback)
 on:
   push:
     branches:
-      - prod
+      - main
 
 permissions:
   id-token: write
