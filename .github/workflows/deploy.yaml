@@ -593,22 +593,22 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
         
 
-      # - name: Login to ECR on EC2 instance
-      #   run: |
-      #     INSTANCE_ID="${{ secrets.PROD_PRIVATE_INSTANCE_ID }}"
+      - name: Login to ECR on EC2 instance
+        run: |
+          INSTANCE_ID="${{ secrets.PROD_PRIVATE_INSTANCE_ID }}"
           
-      #     echo "Logging into ECR on EC2 instance"
+          echo "Logging into ECR on EC2 instance"
           
-      #     aws ssm send-command \
-      #       --instance-ids "${INSTANCE_ID}" \
-      #       --document-name "AWS-RunShellScript" \
-      #       --parameters 'commands=[
-      #         "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com"
-      #       ]' \
-      #       --region ${{ secrets.AWS_REGION }}
+          aws ssm send-command \
+            --instance-ids "${INSTANCE_ID}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=[
+              "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com"
+            ]' \
+            --region ${{ secrets.AWS_REGION }}
           
-      #     sleep 5
-      #     echo "ECR login completed"
+          sleep 5
+          echo "ECR login completed"
 
       - name: Trigger blue green deployment through SSM
         run: |
@@ -634,7 +634,7 @@ jobs:
 
           echo "SSM Command ID: ${COMMAND_ID}"
 
-          sleep 120
+          sleep 10
 
           RESULT=$(aws ssm get-command-invocation \
             --command-id "${COMMAND_ID}" \
