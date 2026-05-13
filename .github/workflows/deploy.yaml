@@ -633,7 +633,7 @@ jobs:
 
           echo "SSM Command ID: ${COMMAND_ID}"
 
-          sleep 10
+          sleep 40
 
           RESULT=$(aws ssm get-command-invocation \
             --command-id "${COMMAND_ID}" \
