@@ -674,12 +674,6 @@ jobs:
 
 
 
-
-
-
-
-
-
           name: Deploy Frontend to EC2 Prod Blue Green
 
 on:
