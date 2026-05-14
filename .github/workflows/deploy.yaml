@@ -673,8 +673,8 @@ on:
       - main
       - release
   push:
-    branches:
-      - main
+    # branches:
+      # - main
 
 jobs:
   test-and-build:
