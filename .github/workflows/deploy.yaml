@@ -439,7 +439,7 @@ name: Deploy Frontend to EC2 Prod Blue Green
 on:
   push:
     branches:
-      - main
+      - release
 
 permissions:
   id-token: write
