@@ -668,12 +668,12 @@
 name: CI Pipeline
 
 on:
-  pull_request:
-    branches:
-      - main
-  # push:
+  # pull_request:
     # branches:
       # - main
+  push:
+    branches:
+      - main
 
 jobs:
   test-and-build:
