@@ -103,6 +103,6 @@ jobs:
 
           git checkout release
 
-          git merge origin/main --no-ff -m "Auto merge main into release"
+          git merge origin/main --ff-only
 
           git push origin release
