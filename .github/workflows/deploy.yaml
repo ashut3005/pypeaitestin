@@ -540,7 +540,7 @@ jobs:
           docker push "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:latest"
 
   deploy:
-    environment: production
+    # environment: production
     name: Deploy to Private EC2 using Blue Green
     runs-on: ubuntu-latest
     needs: docker-build-push
