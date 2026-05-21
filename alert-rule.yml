@@ -1,0 +1,465 @@
+groups:
+  - name: NodeExporter
+    rules:
+      - alert: HostOutOfMemory
+        expr: '(node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < .10)'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host out of memory (instance {{ $labels.alert_node }}
+          description: "Node memory is filling up (< 10% left)\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostMemoryUnderMemoryPressure
+        expr: '(deriv(node_vmstat_pgmajfault[5m]) > 300)'
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host memory under memory pressure (instance {{ $labels.alert_node }}
+          description: "The node is under heavy memory pressure. High rate of major page faults ({{ $value }}/s).\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostMemoryIsUnderutilized
+        expr: 'min_over_time(node_memory_MemAvailable_bytes[3d]) > node_memory_MemTotal_bytes * .8'
+        for: 0m
+        labels:
+          severity: info
+        annotations:
+          summary: Host Memory is underutilized (instance {{ $labels.alert_node }}
+          description: "Node memory usage has been < 20% for the last 3 days. Consider reducing memory space. (instance {{ $labels.alert_node }}\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostUnusualNetworkThroughputIn
+        expr: '(rate(node_network_receive_bytes_total[5m]) / node_network_speed_bytes > 0.80 and node_network_speed_bytes > 0) or (rate(node_network_receive_bytes_total[5m]) > 112500000)'
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host unusual network throughput in (instance {{ $labels.alert_node }}
+          description: "Host receive bandwidth is unusually high (>80% of NIC capacity OR >900 Mbps absolute) for over 5 minutes.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostUnusualNetworkThroughputOut
+        expr: '(rate(node_network_transmit_bytes_total[5m]) / node_network_speed_bytes > 0.80 and node_network_speed_bytes > 0) or (rate(node_network_transmit_bytes_total[5m]) > 112500000)'
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host unusual network throughput out (instance {{ $labels.alert_node }}
+          description: "Host transmit bandwidth is unusually high (>80% of NIC capacity OR >900 Mbps absolute) for over 5 minutes.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostDiskIoUtilizationHigh
+        expr: '(rate(node_disk_io_time_seconds_total[5m]) > .80)'
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host disk IO utilization high (instance {{ $labels.alert_node }}
+          description: "Disk utilization is high (> 80%)\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostOutOfDiskSpaceWarning
+        expr: '(node_filesystem_free_bytes{fstype!~"^(fuse.*|tmpfs|devtmpfs|cifs|nfs)"} / node_filesystem_size_bytes < .10 and on (instance, device, mountpoint) node_filesystem_readonly == 0)'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host out of disk space warning (instance {{ $labels.alert_node }}
+          description: "Disk is running low on space (< 10% left)\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostOutOfDiskSpaceCritical
+        expr: '(node_filesystem_free_bytes{fstype!~"^(fuse.*|tmpfs|devtmpfs|cifs|nfs)"} / node_filesystem_size_bytes < .05 and on (instance, device, mountpoint) node_filesystem_readonly == 0)'
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Host out of disk space critical (instance {{ $labels.alert_node }}
+          description: "Disk is almost full (< 5% left) for more than 5 mins.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostDiskMayFillIn24Hours
+        expr: 'predict_linear(node_filesystem_free_bytes{fstype!~"^(fuse.*|tmpfs|devtmpfs|cifs|nfs)"}[3h], 86400) <= 0 and node_filesystem_free_bytes > 0'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host disk may fill in 24 hours (instance {{ $labels.alert_node }}
+          description: "Filesystem will likely run out of space within the next 24 hours.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostOutOfInodes
+        expr: '(node_filesystem_files_free / node_filesystem_files < .10 and ON (instance, device, mountpoint) node_filesystem_readonly == 0) and node_filesystem_files > 0'
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Host out of inodes (instance {{ $labels.alert_node }}
+          description: "Disk is almost running out of available inodes (< 10% left)\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostFilesystemDeviceError
+        expr: 'node_filesystem_device_error{fstype!~"^(fuse.*|tmpfs|devtmpfs|cifs|nfs)"} == 1'
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Host filesystem device error (instance {{ $labels.alert_node }}
+          description: "Error stat-ing the {{ $labels.mountpoint }} filesystem\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostInodesMayFillIn24Hours
+        expr: 'predict_linear(node_filesystem_files_free{fstype!~"^(fuse.*|tmpfs|devtmpfs|cifs|nfs)"}[1h], 86400) <= 0 and node_filesystem_files_free > 0'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host inodes may fill in 24 hours (instance {{ $labels.alert_node }}
+          description: "Filesystem will likely run out of inodes within the next 24 hours at current write rate\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostUnusualDiskReadLatencySSD
+        expr: '(rate(node_disk_read_time_seconds_total{device=~"nvme.*|vd.*"}[1m]) / rate(node_disk_reads_completed_total{device=~"nvme.*|vd.*"}[1m]) > 0.02 and rate(node_disk_reads_completed_total{device=~"nvme.*|vd.*"}[1m]) > 0)'
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host unusual SSD disk read latency (instance {{ $labels.alert_node }}
+          description: "SSD read latency is growing (> 20ms) for over 5 minutes.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostUnusualDiskReadLatencyHDD
+        expr: '(rate(node_disk_read_time_seconds_total{device=~"sd.*"}[1m]) / rate(node_disk_reads_completed_total{device=~"sd.*"}[1m]) > 0.1 and rate(node_disk_reads_completed_total{device=~"sd.*"}[1m]) > 0)'
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host unusual HDD disk read latency (instance {{ $labels.alert_node }}
+          description: "HDD read latency is growing (> 100ms) for over 5 minutes.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostUnusualDiskWriteLatencySSD
+        expr: '(rate(node_disk_write_time_seconds_total{device=~"nvme.*|vd.*"}[1m]) / rate(node_disk_writes_completed_total{device=~"nvme.*|vd.*"}[1m]) > 0.02 and rate(node_disk_writes_completed_total{device=~"nvme.*|vd.*"}[1m]) > 0)'
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host unusual SSD disk write latency (instance {{ $labels.alert_node }}
+          description: "SSD write latency is growing (> 20ms) for over 5 minutes.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostUnusualDiskWriteLatencyDatabaseSSD
+        expr: '(rate(node_disk_write_time_seconds_total{device=~"nvme.*|vd.*", job=~".*db.*|.*mongo.*|.*postgres.*|.*mysql.*"}[1m]) / rate(node_disk_writes_completed_total{device=~"nvme.*|vd.*", job=~".*db.*|.*mongo.*|.*postgres.*|.*mysql.*"}[1m]) > 0.01 and rate(node_disk_writes_completed_total{device=~"nvme.*|vd.*", job=~".*db.*|.*mongo.*|.*postgres.*|.*mysql.*"}[1m]) > 0)'
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Host unusual Database SSD disk write latency (instance {{ $labels.alert_node }}
+          description: "Database SSD write latency is critical (> 10ms) for over 5 minutes.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostUnusualDiskWriteLatencyHDD
+        expr: '(rate(node_disk_write_time_seconds_total{device=~"sd.*"}[1m]) / rate(node_disk_writes_completed_total{device=~"sd.*"}[1m]) > 0.1 and rate(node_disk_writes_completed_total{device=~"sd.*"}[1m]) > 0)'
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host unusual HDD disk write latency (instance {{ $labels.alert_node }}
+          description: "HDD write latency is growing (> 100ms) for over 5 minutes.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostHighCpuLoad
+        expr: '1 - (avg without (cpu) (rate(node_cpu_seconds_total{mode="idle"}[5m]))) > .80'
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host high CPU load (instance {{ $labels.alert_node }}
+          description: "CPU load is > 80%\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostCpuIsUnderutilized
+        expr: '(min without (cpu) (rate(node_cpu_seconds_total{mode="idle"}[1h]))) > 0.8'
+        for: 1w
+        labels:
+          severity: info
+        annotations:
+          summary: Host CPU is underutilized (instance {{ $labels.alert_node }}
+          description: "CPU load has been < 20% for 1 week. Consider reducing the number of CPUs.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostCpuStealNoisyNeighbor
+        expr: 'avg without (cpu) (rate(node_cpu_seconds_total{mode="steal"}[5m])) * 100 > 10'
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host CPU steal noisy neighbor (instance {{ $labels.alert_node }}
+          description: "CPU steal is > 10%. A noisy neighbor is killing VM performances or a spot instance may be out of credit.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostCpuHighIowait
+        expr: 'avg without (cpu) (rate(node_cpu_seconds_total{mode="iowait"}[5m])) > .10'
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host CPU high iowait (instance {{ $labels.alert_node }}
+          description: "CPU iowait > 10%. Your CPU is idling waiting for storage to respond.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostUnusualDiskIo
+        expr: 'rate(node_disk_io_time_seconds_total[5m]) > 0.8'
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host unusual disk IO (instance {{ $labels.alert_node }}
+          description: "Disk usage >80%. Check storage for issues or increase IOPS capabilities.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostContextSwitchingHigh
+        expr: '(rate(node_context_switches_total[15m])/count without(mode,cpu) (node_cpu_seconds_total{mode="idle"})) / (rate(node_context_switches_total[1d])/count without(mode,cpu) (node_cpu_seconds_total{mode="idle"})) > 2 and rate(node_context_switches_total[1d]) > 0'
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host context switching high (instance {{ $labels.alert_node }}
+          description: "Context switching is growing on the node (2x the daily average during the last 15m)\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostSwapIsFillingUpWarning
+        expr: '((1 - (node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes)) * 100 > 60) and node_memory_SwapTotal_bytes > 0'
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host swap is filling up warning (instance {{ $labels.alert_node }}
+          description: "Swap usage is high (>60%) for over 5 minutes. System might start slowing down.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostSwapIsFillingUpCritical
+        expr: '((1 - (node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes)) * 100 > 90) and node_memory_SwapTotal_bytes > 0'
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Host swap is filling up critical (instance {{ $labels.alert_node }}
+          description: "Swap is critically full (>90%) for over 5 minutes. Processes are likely suffering from severe thrashing.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostSystemdServiceCrashed
+        expr: '(node_systemd_unit_state{state="failed"} == 1)'
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host systemd service crashed (instance {{ $labels.alert_node }}
+          description: "systemd service {{ $labels.name }} crashed\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostPhysicalComponentTooHot
+        expr: 'node_hwmon_temp_celsius > node_hwmon_temp_max_celsius'
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host physical component too hot (instance {{ $labels.alert_node }}
+          description: "Physical hardware component too hot\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostNodeOvertemperatureAlarm
+        expr: '((node_hwmon_temp_crit_alarm_celsius == 1) or (node_hwmon_temp_alarm == 1))'
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: Host node overtemperature alarm (instance {{ $labels.alert_node }}
+          description: "Physical node temperature alarm triggered\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostSoftwareRaidInsufficientDrives
+        expr: '((node_md_disks_required - ignoring(state) node_md_disks{state="active"}) > 0)'
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: Host software RAID insufficient drives (instance {{ $labels.alert_node }}
+          description: "MD RAID array {{ $labels.device }} on {{ $labels.nodename }} has insufficient drives remaining.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostSoftwareRaidDiskFailure
+        expr: '(node_md_disks{state="failed"} > 0)'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host software RAID disk failure (instance {{ $labels.alert_node }}
+          description: "MD RAID array {{ $labels.device }} on {{ $labels.nodename }} needs attention.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostKernelVersionDeviations
+        expr: 'changes(node_uname_info[5m]) > 0'
+        for: 0m
+        labels:
+          severity: info
+        annotations:
+          summary: Host kernel version deviations (instance {{ $labels.alert_node }}
+          description: "Kernel version for {{ $labels.nodename }} has changed within the last 5 minutes.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostOomKillDetected
+        expr: '(delta(node_vmstat_oom_kill[30m]) > 0)'
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host OOM kill detected (instance {{ $labels.alert_node }}
+          description: "OOM kill detected\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostEdacCorrectableErrorsDetected
+        expr: '(increase(node_edac_correctable_errors_total[1m]) > 0)'
+        for: 0m
+        labels:
+          severity: info
+        annotations:
+          summary: Host EDAC Correctable Errors detected (instance {{ $labels.alert_node }}
+          description: "Host {{ $labels.nodename }} has had {{ printf \"%.0f\" $value }} correctable memory errors reported by EDAC in the last 1 minute.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostEdacUncorrectableErrorsDetected
+        expr: '(node_edac_uncorrectable_errors_total > 0)'
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host EDAC Uncorrectable Errors detected (instance {{ $labels.alert_node }}
+          description: "Host {{ $labels.nodename }} has had {{ printf \"%.0f\" $value }} uncorrectable memory errors reported by EDAC.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostNetworkReceiveErrors
+        expr: '(rate(node_network_receive_errs_total[2m]) / rate(node_network_receive_packets_total[2m]) > 0.01) and rate(node_network_receive_packets_total[2m]) > 166.66'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host Network Receive Errors (instance {{ $labels.alert_node }}
+          description: "Host {{ $labels.nodename }} interface {{ $labels.device }} has a high receive error rate (>1%) with significant traffic (>10k pkts/min).\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostNetworkTransmitErrors
+        expr: '(rate(node_network_transmit_errs_total[2m]) / rate(node_network_transmit_packets_total[2m]) > 0.01) and rate(node_network_transmit_packets_total[2m]) > 166.66'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host Network Transmit Errors (instance {{ $labels.alert_node }}
+          description: "Host {{ $labels.nodename }} interface {{ $labels.device }} has a high transmit error rate (>1%) with significant traffic (>10k pkts/min).\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostNetworkBondDegraded
+        expr: '((node_bonding_active - node_bonding_slaves) != 0)'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host Network Bond Degraded (instance {{ $labels.alert_node }}
+          description: "Bond \"{{ $labels.device }}\" degraded on \"{{ $labels.nodename }}\".\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostConntrackLimitWarning
+        expr: '(node_nf_conntrack_entries / node_nf_conntrack_entries_limit > 0.8) and node_nf_conntrack_entries_limit > 0'
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host conntrack limit warning (instance {{ $labels.alert_node }}
+          description: "The number of conntrack entries is approaching the limit (> 80%).\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostConntrackLimitCritical
+        expr: '(node_nf_conntrack_entries / node_nf_conntrack_entries_limit > 0.9) and node_nf_conntrack_entries_limit > 0'
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Host conntrack limit critical (instance {{ $labels.alert_node }}
+          description: "Conntrack table is > 90% full. At 100%, the system will silently drop new connections.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostClockSkew
+        expr: '((node_timex_offset_seconds > 0.05 and deriv(node_timex_offset_seconds[5m]) >= 0) or (node_timex_offset_seconds < -0.05 and deriv(node_timex_offset_seconds[5m]) <= 0))'
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host clock skew (instance {{ $labels.alert_node }}
+          description: "Clock skew detected. Clock is out of sync. Ensure NTP is configured correctly on this host.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostClockNotSynchronising
+        expr: '(min_over_time(node_timex_sync_status[1m]) == 0 and node_timex_maxerror_seconds >= 16)'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host clock not synchronising (instance {{ $labels.alert_node }}
+          description: "Clock not synchronising. Ensure NTP is configured on this host.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      # ====================================================================
+      # NEWLY ADDED RULES START HERE 
+      # ====================================================================
+
+      - alert: HostLoadAverageHigh
+        expr: '(node_load1 / count without(cpu, mode) (node_cpu_seconds_total{mode="idle"})) > 2'
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host load average high (instance {{ $labels.alert_node }}
+          description: "CPU load average is > 2 per core\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostProcessesHigh
+        expr: 'node_procs_state{state="R"} > 50 or node_procs_state{state="D"} > 10'
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host high processes running or blocked (instance {{ $labels.alert_node }}
+          description: "Unusually high number of running (>50) or I/O blocked (>10) processes detected.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostZombiesTooManyProcesses
+        expr: 'node_procs_state{state="Z"} > 5'
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host zombies too many processes (instance {{ $labels.alert_node }}
+          description: "More than 5 zombie processes detected.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostNetworkInterfaceDown
+        expr: 'node_network_up{device!~"lo"} == 0'
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Host network interface down (instance {{ $labels.alert_node }}
+          description: "Network interface {{ $labels.device }} is down.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostFileDescriptorsExhausted
+        expr: '(node_filefd_allocated / node_filefd_maximum) > 0.9'
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Host file descriptors exhausted (instance {{ $labels.alert_node }}
+          description: "System file descriptor allocation is > 90%.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostNodeExporterDown
+        expr: 'up{job="node_exporter"} == 0'
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Host Node Exporter Down (instance {{ $labels.alert_node }}
+          description: "Node Exporter has been down for over 2 minutes.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostRecentReboot
+        expr: 'time() - node_boot_time_seconds < 300'
+        for: 0m
+        labels:
+          severity: info
+        annotations:
+          summary: Host recent reboot (instance {{ $labels.alert_node }}
+          description: "Node has just been rebooted unexpectedly or patched.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostNetworkDropsHigh
+        expr: '(increase(node_network_receive_drop_total[2m]) > 0) or (increase(node_network_transmit_drop_total[2m]) > 0)'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host network drops high (instance {{ $labels.alert_node }}
+          description: "High network packet drops detected on interface {{ $labels.device }}. Check for queue saturation.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostRaidRebuildInProgress
+        expr: '(node_md_disks_required - node_md_disks{state="active"} > 0) and node_md_disks{state="failed"} == 0'
+        for: 0m
+        labels:
+          severity: info
+        annotations:
+          summary: Host RAID rebuild in progress (instance {{ $labels.alert_node }}
+          description: "RAID array {{ $labels.device }} is currently rebuilding. Expect reduced redundancy.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostUlimitViolation
+        expr: '(process_open_fds / process_max_fds) > 0.9'
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host ulimit violation / open files high (instance {{ $labels.alert_node }}
+          description: "Process open file descriptors are > 90% of limit.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
