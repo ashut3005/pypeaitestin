@@ -474,7 +474,7 @@ permissions:
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-  ECR_REPOSITORY: frontend-app
+  ECR_REPOSITORY: whispey-frontend-prod
 
 jobs:
   docker-build-push:
