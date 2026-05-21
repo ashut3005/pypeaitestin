@@ -1,12 +1,65 @@
+name: CI Pipeline
+
+on:
+  pull_request:
+    branches:
+      - main
+      - release
+  # push:
+  #   branches:
+  #     - main
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Show Trigger Information
+        run: |
+          echo "Pipeline Triggered!"
+          echo "Source Branch (PR From): ${{ github.head_ref }}"
+          echo "Target Branch (PR To): ${{ github.base_ref }}"
+          echo "Commit SHA: ${{ github.sha }}"
+          echo "Repository: ${{ github.repository }}"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          # cache: npm
+          # cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+        continue-on-error: false
+
+      - name: Build project
+        run: npm run build
+
+      - name: List build output (debug)
+        run: ls -R
+
+
+
 # name: CI Pipeline
 
 # on:
-#   # pull_request:
-#     # branches:
-#       # - main
 #   push:
 #     branches:
 #       - main
+
+# permissions:
+#   contents: write
 
 # jobs:
 #   test-and-build:
@@ -24,91 +77,15 @@
 #         uses: actions/setup-node@v4
 #         with:
 #           node-version: 20
-#           # cache: npm
-#           # cache-dependency-path: frontend/package-lock.json
 
 #       - name: Install dependencies
 #         run: npm install
 
 #       - name: Run tests
 #         run: npm test
-#         continue-on-error: false
 
 #       - name: Build project
 #         run: npm run build
 
 #       - name: List build output (debug)
 #         run: ls -R
-
-
-
-name: CI Pipeline
-
-on:
-  push:
-    branches:
-      - main
-
-permissions:
-  contents: write
-
-jobs:
-  test-and-build:
-    runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: frontend
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Run tests
-        run: npm test
-
-      - name: Build project
-        run: npm run build
-
-      - name: List build output (debug)
-        run: ls -R
-
-  merge-main-to-release:
-    needs: test-and-build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.PAT_TOKEN }}
-
-      - name: Configure Git
-        run: |
-          git config user.name "ashut3005"
-          git config user.email "ashut3005@users.noreply.github.com"
-
-      - name: Fetch all branches
-        run: |
-          git fetch origin
-
-      - name: Checkout release branch
-        run: |
-          git checkout release
-
-      - name: Fast-forward merge main into release
-        run: |
-          git merge origin/main --ff-only
-
-      - name: Push release branch
-        run: |
-          git push https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}.git release
