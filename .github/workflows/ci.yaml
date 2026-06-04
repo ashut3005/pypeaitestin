@@ -63,9 +63,14 @@ jobs:
           projectBaseDir: frontend
           args: >
             -Dsonar.projectKey=Frontend-Application
+      - name: Debug Sonar Files
+        run: |
+          find . -name "report-task.txt"
 
       - name: Check SonarQube Quality Gate
         uses: SonarSource/sonarqube-quality-gate-action@v1
+        with:
+          scanMetadataReportFile: frontend/.scannerwork/report-task.txt
         timeout-minutes: 10
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
