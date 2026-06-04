@@ -5,9 +5,6 @@ on:
     branches:
       - main
       - release
-  # push:
-  #   branches:
-  #     - main
 
 jobs:
   test-and-build:
@@ -39,7 +36,6 @@ jobs:
 
       - name: Run tests
         run: npm test
-        continue-on-error: false
 
       - name: Build project
         run: npm run build
@@ -59,21 +55,20 @@ jobs:
           fetch-depth: 0
 
       - name: Run SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         with:
           projectBaseDir: frontend
+          args: >
+            -Dsonar.projectKey=Frontend-Application
 
       - name: Check SonarQube Quality Gate
         uses: SonarSource/sonarqube-quality-gate-action@v1
         timeout-minutes: 10
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-
-# done
 
 
 
