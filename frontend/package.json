@@ -6,7 +6,7 @@
     "start": "node server.js",
     "build": "echo Build complete",
     "test": "echo No tests",
-    "lint": "eslint ."
+    "lint": "eslint server.js"
   },
   "dependencies": {
     "express": "^4.18.2"
