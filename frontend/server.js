@@ -4,6 +4,8 @@ const path = require('path');        // File path handling
 const app = express();
 const PORT = process.env.PORT || 3000;  // Listen on port 3000
 
+const unusedVariable = 'test';  // This variable is intentionally left unused to demonstrate linting
+
 // Serve static files (CSS, JS, images from frontend folder)
 app.use(express.static(path.join(__dirname)));
 
