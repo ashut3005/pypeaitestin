@@ -216,13 +216,13 @@ jobs:
           docker build \
             -f clients/felix/Dockerfile \
             -t "${IMAGE_URI}" \
-            -t "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:latest" \
+            -t "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}" \
             clients/felix
 
       - name: Push Docker image
         run: |
           docker push "${IMAGE_URI}"
-          docker push "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:latest"
+          docker push "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}"
 
   deploy:
     # environment: production
