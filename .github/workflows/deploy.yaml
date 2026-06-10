@@ -267,7 +267,7 @@ jobs:
             --query "Command.CommandId" \
             --output text)
 
-          sleep 30
+          sleep 120
 
           RESULT=$(aws ssm get-command-invocation \
             --command-id "${COMMAND_ID}" \
