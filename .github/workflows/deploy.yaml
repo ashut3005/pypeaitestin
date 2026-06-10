@@ -147,7 +147,7 @@ on:
   push:
     branches:
       - release
-  paths:
+    paths:
       - 'clients/felix/**'
 
 permissions:
