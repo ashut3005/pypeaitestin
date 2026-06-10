@@ -1,233 +1,5 @@
-# #  paras yaml file
-
-# # name: Deploy Frontend to EC2 Prod Blue Green
-
-# # on:
-# #   push:
-# #     branches:
-# #       - main
-
-# # permissions:
-# #   id-token: write
-# #   contents: read
-
-# # env:
-# #   AWS_REGION: ${{ secrets.AWS_REGION }}
-# #   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-# #   ECR_REPOSITORY: whispey-frontend-prod
-# #   BRANCH: prod
-
-# # jobs:
-# #   test:
-# #     name: Test and Build Validation
-# #     runs-on: ubuntu-latest
-
-# #     defaults:
-# #       run:
-# #         working-directory: frontend
-
-# #     steps:
-# #       - name: Checkout code
-# #         uses: actions/checkout@v4
-
-# #       - name: Set up Node.js
-# #         uses: actions/setup-node@v4
-# #         with:
-# #           node-version: "20"
-# #           # cache: "npm"
-# #           # cache-dependency-path: frontend/package-lock.json
-
-# #       - name: Install dependencies
-# #         run: npm install
-
-# #       - name: Run lint
-# #         run: |
-# #           if npm run | grep -q "lint"; then
-# #             npm run lint
-# #           else
-# #             echo "No lint script found, skipping lint"
-# #           fi
-
-# #       - name: Run tests
-# #         run: |
-# #           if npm run | grep -q "test"; then
-# #             npm test
-# #           else
-# #             echo "No test script found, skipping tests"
-# #           fi
-# #         continue-on-error: true
-
-# #       - name: Build application
-# #         run: npm run build
-
-# #   # sonarqube:
-# #   #   name: SonarQube Scan and Quality Gate
-# #   #   runs-on: ubuntu-latest
-# #   #   needs: test
-# #   #
-# #   #   steps:
-# #   #     - name: Checkout code
-# #   #       uses: actions/checkout@v4
-# #   #       with:
-# #   #         fetch-depth: 0
-# #   #
-# #   #     - name: Run SonarQube scan
-# #   #       uses: SonarSource/sonarqube-scan-action@v5
-# #   #       env:
-# #   #         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-# #   #         SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-# #   #
-# #   #     - name: Check SonarQube Quality Gate
-# #   #       uses: SonarSource/sonarqube-quality-gate-action@v1
-# #   #       timeout-minutes: 10
-# #   #       env:
-# #   #         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-# #   docker-build-push:
-# #     name: Build and Push Docker Image to ECR
-# #     runs-on: ubuntu-latest
-# #     needs: test
-
-# #     outputs:
-# #       image_uri: ${{ steps.image.outputs.image_uri }}
-# #       image_tag: ${{ steps.image.outputs.image_tag }}
-
-# #     steps:
-# #       - name: Checkout code
-# #         uses: actions/checkout@v4
-
-# #       - name: Prepare image details
-# #         id: image
-# #         run: |
-# #           IMAGE_TAG="${GITHUB_SHA}"
-# #           IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}"
-
-# #           echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
-# #           echo "IMAGE_URI=${IMAGE_URI}" >> $GITHUB_ENV
-
-# #           echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
-# #           echo "image_uri=${IMAGE_URI}" >> $GITHUB_OUTPUT
-
-# #           echo "Image URI: ${IMAGE_URI}"
-
-# #       - name: Configure AWS credentials using OIDC
-# #         uses: aws-actions/configure-aws-credentials@v4
-# #         with:
-# #           role-to-assume: ${{ secrets.PROD_AWS_ROLE_ARN }}
-# #           aws-region: ${{ secrets.AWS_REGION }}
-
-# #       - name: Login to Amazon ECR
-# #         run: |
-# #           aws ecr get-login-password --region "${AWS_REGION}" \
-# #             | docker login \
-# #               --username AWS \
-# #               --password-stdin "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-
-# #       - name: Ensure ECR repository exists
-# #         run: |
-# #           aws ecr describe-repositories \
-# #             --repository-names "${ECR_REPOSITORY}" \
-# #             --region "${AWS_REGION}" \
-# #           || aws ecr create-repository \
-# #             --repository-name "${ECR_REPOSITORY}" \
-# #             --region "${AWS_REGION}"
-
-# #       - name: Build Docker image
-# #         run: |
-# #           docker build \
-# #             -f frontend/Dockerfile \
-# #             -t "${IMAGE_URI}" \
-# #             -t "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:latest" \
-# #             frontend
-
-# #       - name: Push Docker image
-# #         run: |
-# #           docker push "${IMAGE_URI}"
-# #           docker push "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:latest"
-
-# #   deploy:
-# #     name: Deploy to Private EC2 using Blue Green
-# #     runs-on: ubuntu-latest
-# #     needs: docker-build-push
-# #     environment: production
-
-# #     steps:
-# #       - name: Configure AWS credentials using OIDC
-# #         uses: aws-actions/configure-aws-credentials@v4
-# #         with:
-# #           role-to-assume: ${{ secrets.PROD_AWS_ROLE_ARN }}
-# #           aws-region: ${{ secrets.AWS_REGION }}
-
-# #       - name: Trigger blue green deployment through SSM
-# #         run: |
-# #           IMAGE_TAG="${GITHUB_SHA}"
-# #           IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}"
-# #           INSTANCE_ID="${{ secrets.PROD_PRIVATE_INSTANCE_ID }}"
-
-# #           echo "Deploying image: ${IMAGE_URI}"
-# #           echo "Image tag: ${IMAGE_TAG}"
-# #           echo "Target private EC2 instance: ${INSTANCE_ID}"
-
-# #           COMMAND_ID=$(aws ssm send-command \
-# #             --instance-ids "${INSTANCE_ID}" \
-# #             --document-name "AWS-RunShellScript" \
-# #             --comment "Frontend blue green deploy - ${IMAGE_TAG}" \
-# #             --parameters commands='[
-# #               "set -e",
-# #               "echo Starting frontend blue green deployment",
-# #               "sudo /opt/frontend/deploy.sh '"${IMAGE_URI}"' '"${IMAGE_TAG}"'"
-# #             ]' \
-# #             --query "Command.CommandId" \
-# #             --output text)
-
-# #           echo "SSM Command ID: ${COMMAND_ID}"
-
-# #           sleep 10
-
-# #           RESULT=$(aws ssm get-command-invocation \
-# #             --command-id "${COMMAND_ID}" \
-# #             --instance-id "${INSTANCE_ID}")
-
-# #           STATUS=$(echo "${RESULT}" | jq -r '.StatusDetails')
-# #           STDOUT=$(echo "${RESULT}" | jq -r '.StandardOutputContent')
-# #           STDERR=$(echo "${RESULT}" | jq -r '.StandardErrorContent')
-
-# #           echo "──── STATUS ────"
-# #           echo "${STATUS}"
-
-# #           echo "──── STDOUT ────"
-# #           echo "${STDOUT}"
-
-# #           if [ -n "${STDERR}" ]; then
-# #             echo "──── STDERR ────"
-# #             echo "${STDERR}"
-# #           fi
-
-# #           if [ "${STATUS}" != "Success" ]; then
-# #             echo "Deployment failed. SSM status: ${STATUS}"
-# #             exit 1
-# #           fi
-
-# #           echo "Deployment completed successfully"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# cluade ai with the login ecr before the blue green deployment this is the running pipeline 
-# name: Deploy Frontend to EC2 Prod Blue Green
+#  new pipeline accordin to the amneeks suggestion 
+# name: Frontend Production Deployment
 
 # on:
 #   push:
@@ -238,233 +10,148 @@
 #   id-token: write
 #   contents: read
 
+
 # env:
 #   AWS_REGION: ${{ secrets.AWS_REGION }}
 #   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
 #   ECR_REPOSITORY: whispey-frontend-prod
-#   BRANCH: prod
 
 # jobs:
-#   test:
-#     name: Test and Build Validation
+#   docker-build-push:
+#     environment: production
+#     name: Build and Push Docker Image to ECR
 #     runs-on: ubuntu-latest
 
-#     defaults:
-#       run:
-#         working-directory: frontend
+#     outputs:
+#       image_uri: ${{ steps.image.outputs.image_uri }}
+#       image_tag: ${{ steps.image.outputs.image_tag }}
 
 #     steps:
 #       - name: Checkout code
 #         uses: actions/checkout@v4
 
-#       - name: Set up Node.js
-#         uses: actions/setup-node@v4
+#       - name: Prepare image details
+#         id: image
+#         run: |
+#           IMAGE_TAG="${GITHUB_SHA}"
+#           IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}"
+
+#           echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
+#           echo "IMAGE_URI=${IMAGE_URI}" >> $GITHUB_ENV
+
+#           echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+#           echo "image_uri=${IMAGE_URI}" >> $GITHUB_OUTPUT
+
+#           echo "Image URI: ${IMAGE_URI}"
+
+#       - name: Configure AWS credentials using OIDC
+#         uses: aws-actions/configure-aws-credentials@v4
 #         with:
-#           node-version: "20"
-#           # cache: "npm"
-#           # cache-dependency-path: frontend/package-lock.json
+#           role-to-assume: ${{ secrets.PROD_AWS_ROLE_ARN }}
+#           aws-region: ${{ env.AWS_REGION }}
 
-#       - name: Install dependencies
-#         run: npm install
-
-#       - name: Run lint
+#       - name: Login to Amazon ECR
 #         run: |
-#           if npm run | grep -q "lint"; then
-#             npm run lint
-#           else
-#             echo "No lint script found, skipping lint"
+#           aws ecr get-login-password --region "${AWS_REGION}" \
+#             | docker login \
+#               --username AWS \
+#               --password-stdin "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+
+#       - name: Ensure ECR repository exists
+#         run: |
+#           aws ecr describe-repositories \
+#             --repository-names "${ECR_REPOSITORY}" \
+#             --region "${AWS_REGION}" \
+#           || aws ecr create-repository \
+#             --repository-name "${ECR_REPOSITORY}" \
+#             --region "${AWS_REGION}"
+
+#       - name: Build Docker image
+#         run: |
+#           docker build \
+#             -f frontend/Dockerfile \
+#             -t "${IMAGE_URI}" \
+#             -t "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:latest" \
+#             frontend
+
+#       - name: Push Docker image
+#         run: |
+#           docker push "${IMAGE_URI}"
+#           docker push "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:latest"
+
+#   deploy:
+#     # environment: production
+#     name: Deploy to Private EC2 using Blue Green
+#     runs-on: ubuntu-latest
+#     needs: docker-build-push
+
+#     steps:
+#       - name: Configure AWS credentials using OIDC
+#         uses: aws-actions/configure-aws-credentials@v4
+#         with:
+#           role-to-assume: ${{ secrets.PROD_AWS_ROLE_ARN }}
+#           aws-region: ${{ env.AWS_REGION }}
+
+#       - name: Login to ECR on EC2 instance
+#         run: |
+#           INSTANCE_ID="${{ secrets.PROD_PRIVATE_INSTANCE_ID }}"
+
+#           aws ssm send-command \
+#             --instance-ids "${INSTANCE_ID}" \
+#             --document-name "AWS-RunShellScript" \
+#             --parameters 'commands=[
+#               "aws ecr get-login-password --region '"${AWS_REGION}"' | docker login --username AWS --password-stdin '"${AWS_ACCOUNT_ID}"'.dkr.ecr.'"${AWS_REGION}"'.amazonaws.com"
+#             ]' \
+#             --region "${AWS_REGION}"
+
+#       - name: Trigger blue green deployment through SSM
+#         run: |
+#           IMAGE_TAG="${GITHUB_SHA}"
+#           IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}"
+#           INSTANCE_ID="${{ secrets.PROD_PRIVATE_INSTANCE_ID }}"
+
+#           COMMAND_ID=$(aws ssm send-command \
+#             --instance-ids "${INSTANCE_ID}" \
+#             --document-name "AWS-RunShellScript" \
+#             --comment "Frontend blue green deploy - ${IMAGE_TAG}" \
+#             --parameters commands='[
+#               "set -e",
+#               "echo Starting frontend blue green deployment",
+#               "sudo /opt/frontend/deploy.sh '"${IMAGE_URI}"' '"${IMAGE_TAG}"'"
+#             ]' \
+#             --query "Command.CommandId" \
+#             --output text)
+
+#           sleep 30
+
+#           RESULT=$(aws ssm get-command-invocation \
+#             --command-id "${COMMAND_ID}" \
+#             --instance-id "${INSTANCE_ID}")
+
+#           STATUS=$(echo "${RESULT}" | jq -r '.StatusDetails')
+
+#           echo "Deployment Status: ${STATUS}"
+
+#           if [ "${STATUS}" != "Success" ]; then
+#             echo "Deployment failed"
+#             exit 1
 #           fi
 
-#       - name: Run tests
-#         run: |
-#           if npm run | grep -q "test"; then
-#             npm test
-#           else
-#             echo "No test script found, skipping tests"
-#           fi
-#         continue-on-error: true
-
-#       - name: Build application
-#         run: npm run build
-
-  # sonarqube:
-  #   name: SonarQube Scan and Quality Gate
-  #   runs-on: ubuntu-latest
-  #   needs: test
-  #
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-  #       with:
-  #         fetch-depth: 0
-  #
-  #     - name: Run SonarQube scan
-  #       uses: SonarSource/sonarqube-scan-action@v5
-  #       env:
-  #         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-  #         SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-  #
-  #     - name: Check SonarQube Quality Gate
-  #       uses: SonarSource/sonarqube-quality-gate-action@v1
-  #       timeout-minutes: 10
-  #       env:
-  #         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-  # docker-build-push:
-  #   name: Build and Push Docker Image to ECR
-  #   runs-on: ubuntu-latest
-  #   needs: test
-
-  #   outputs:
-  #     image_uri: ${{ steps.image.outputs.image_uri }}
-  #     image_tag: ${{ steps.image.outputs.image_tag }}
-
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-
-  #     - name: Prepare image details
-  #       id: image
-  #       run: |
-  #         IMAGE_TAG="${GITHUB_SHA}"
-  #         IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}"
-
-  #         echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
-  #         echo "IMAGE_URI=${IMAGE_URI}" >> $GITHUB_ENV
-
-  #         echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
-  #         echo "image_uri=${IMAGE_URI}" >> $GITHUB_OUTPUT
-
-  #         echo "Image URI: ${IMAGE_URI}"
-
-  #     - name: Configure AWS credentials using OIDC
-  #       uses: aws-actions/configure-aws-credentials@v4
-  #       with:
-  #         role-to-assume: ${{ secrets.PROD_AWS_ROLE_ARN }}
-  #         aws-region: ${{ secrets.AWS_REGION }}
-
-  #     - name: Login to Amazon ECR
-  #       run: |
-  #         aws ecr get-login-password --region "${AWS_REGION}" \
-  #           | docker login \
-  #             --username AWS \
-  #             --password-stdin "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-
-  #     - name: Ensure ECR repository exists
-  #       run: |
-  #         aws ecr describe-repositories \
-  #           --repository-names "${ECR_REPOSITORY}" \
-  #           --region "${AWS_REGION}" \
-  #         || aws ecr create-repository \
-  #           --repository-name "${ECR_REPOSITORY}" \
-  #           --region "${AWS_REGION}"
-
-  #     - name: Build Docker image
-  #       run: |
-  #         docker build \
-  #           -f frontend/Dockerfile \
-  #           -t "${IMAGE_URI}" \
-  #           -t "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:latest" \
-  #           frontend
-
-  #     - name: Push Docker image
-  #       run: |
-  #         docker push "${IMAGE_URI}"
-  #         docker push "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:latest"
-
-  # deploy:
-  #   name: Deploy to Private EC2 using Blue Green
-  #   runs-on: ubuntu-latest
-  #   needs: docker-build-push
-  #   environment: production
-
-  #   steps:
-  #     - name: Configure AWS credentials using OIDC
-  #       uses: aws-actions/configure-aws-credentials@v4
-  #       with:
-  #         role-to-assume: ${{ secrets.PROD_AWS_ROLE_ARN }}
-  #         aws-region: ${{ secrets.AWS_REGION }}
-        
-
-  #     - name: Login to ECR on EC2 instance
-  #       run: |
-  #         INSTANCE_ID="${{ secrets.PROD_PRIVATE_INSTANCE_ID }}"
-          
-  #         echo "Logging into ECR on EC2 instance"
-          
-  #         aws ssm send-command \
-  #           --instance-ids "${INSTANCE_ID}" \
-  #           --document-name "AWS-RunShellScript" \
-  #           --parameters 'commands=[
-  #             "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com"
-  #           ]' \
-  #           --region ${{ secrets.AWS_REGION }}
-          
-  #         sleep 5
-  #         echo "ECR login completed"
-
-  #     - name: Trigger blue green deployment through SSM
-  #       run: |
-  #         IMAGE_TAG="${GITHUB_SHA}"
-  #         IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}"
-  #         INSTANCE_ID="${{ secrets.PROD_PRIVATE_INSTANCE_ID }}"
-
-  #         echo "Deploying image: ${IMAGE_URI}"
-  #         echo "Image tag: ${IMAGE_TAG}"
-  #         echo "Target private EC2 instance: ${INSTANCE_ID}"
-
-  #         COMMAND_ID=$(aws ssm send-command \
-  #           --instance-ids "${INSTANCE_ID}" \
-  #           --document-name "AWS-RunShellScript" \
-  #           --comment "Frontend blue green deploy - ${IMAGE_TAG}" \
-  #           --parameters commands='[
-  #             "set -e",
-  #             "echo Starting frontend blue green deployment",
-  #             "sudo /opt/frontend/deploy.sh '"${IMAGE_URI}"' '"${IMAGE_TAG}"'"
-  #           ]' \
-  #           --query "Command.CommandId" \
-  #           --output text)
-
-  #         echo "SSM Command ID: ${COMMAND_ID}"
-
-  #         sleep 30
-
-  #         RESULT=$(aws ssm get-command-invocation \
-  #           --command-id "${COMMAND_ID}" \
-  #           --instance-id "${INSTANCE_ID}")
-
-  #         STATUS=$(echo "${RESULT}" | jq -r '.StatusDetails')
-  #         STDOUT=$(echo "${RESULT}" | jq -r '.StandardOutputContent')
-  #         STDERR=$(echo "${RESULT}" | jq -r '.StandardErrorContent')
-
-  #         echo "──── STATUS ────"
-  #         echo "${STATUS}"
-
-  #         echo "──── STDOUT ────"
-  #         echo "${STDOUT}"
-
-  #         if [ -n "${STDERR}" ]; then
-  #           echo "──── STDERR ────"
-  #           echo "${STDERR}"
-  #         fi
-
-  #         if [ "${STATUS}" != "Success" ]; then
-  #           echo "Deployment failed. SSM status: ${STATUS}"
-  #           exit 1
-  #         fi
-
-  #         echo "Deployment completed successfully"
+#           echo "Deployment completed successfully"
 
 
 
 
-#  new pipeline accordin to the amneeks suggestion 
-name: Frontend Production Deployment
+
+# for the client/fliex
+name: Clients Production Deployment
 
 on:
   push:
     branches:
       - release
+  paths:
+      - 'clients/felix/**'
 
 permissions:
   id-token: write
@@ -529,10 +216,10 @@ jobs:
       - name: Build Docker image
         run: |
           docker build \
-            -f frontend/Dockerfile \
+            -f clients/felix/Dockerfile \
             -t "${IMAGE_URI}" \
             -t "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:latest" \
-            frontend
+            clients/felix
 
       - name: Push Docker image
         run: |
