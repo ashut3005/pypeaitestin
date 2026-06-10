@@ -1,4 +1,4 @@
-# #  new pipeline accordin to the amneeks suggestion 
+#  new pipeline accordin to the amneeks suggestion 
 # name: Frontend Production Deployment
 
 # on:
@@ -140,7 +140,10 @@
 #           echo "Deployment completed successfully"
 
 
-# for the testing
+
+
+
+# for the client/fliex
 name: Clients Production Deployment
 
 on:
