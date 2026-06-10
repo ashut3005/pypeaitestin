@@ -1,7 +1,3 @@
-from flask import Flask
-
-
-
 @app.route("/health", methods=["GET"])
 def health():
     """Health check endpoint."""
