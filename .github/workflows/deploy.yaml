@@ -150,8 +150,6 @@ on:
   push:
     branches:
       - release
-    paths:
-      - 'clients/felix/**'
 
 permissions:
   id-token: write
