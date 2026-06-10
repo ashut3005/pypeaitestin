@@ -3,10 +3,10 @@ from flask import Flask
 app = Flask(__name__)
 
 
-@app.route("/", methods=["GET"])
-def home():
+@app.route("/health", methods=["GET"])
+def health():
     """Health check endpoint."""
-    return {"message": "Hello from Felix"}, 200
+    return {"status": "healthy"}, 200
 
 
 if __name__ == "__main__":
