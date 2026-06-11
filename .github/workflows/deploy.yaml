@@ -68,15 +68,15 @@ jobs:
       - name: Build Docker image
         run: |
           docker build \
-            -f clients/felix/Dockerfile \
+            -f frontend/Dockerfile \
             -t "${IMAGE_URI}" \
-            -t "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}" \
-            clients/felix
+            -t "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:latest" \
+            frontend
 
       - name: Push Docker image
         run: |
           docker push "${IMAGE_URI}"
-          docker push "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}"
+          docker push "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:latest"
 
   deploy:
     # environment: production
@@ -121,7 +121,7 @@ jobs:
             --query "Command.CommandId" \
             --output text)
 
-          sleep 120
+          sleep 30
 
           RESULT=$(aws ssm get-command-invocation \
             --command-id "${COMMAND_ID}" \
