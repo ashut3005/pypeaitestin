@@ -1,4 +1,5 @@
-name: Clients Production Deployment
+#  new pipeline accordin to the amneeks suggestion 
+name: Frontend Production Deployment
 
 on:
   push:
@@ -13,7 +14,7 @@ permissions:
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+  ECR_REPOSITORY: whispey-frontend-prod
 
 jobs:
   docker-build-push:
