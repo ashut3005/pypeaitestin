@@ -1,50 +1,50 @@
-# name: CI Pipeline
+name: CI Pipeline
 
-# on:
-#   pull_request:
-#     branches:
-#       - main
-#       - release
+on:
+  pull_request:
+    branches:
+      - main
+      - release
 
-# jobs:
-#   test-and-build:
-#     runs-on: ubuntu-latest
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
 
-#     defaults:
-#       run:
-#         working-directory: frontend
+    defaults:
+      run:
+        working-directory: frontend
 
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-#       - name: Show Trigger Information
-#         run: |
-#           echo "Pipeline Triggered!"
-#           echo "Source Branch (PR From): ${{ github.head_ref }}"
-#           echo "Target Branch (PR To): ${{ github.base_ref }}"
-#           echo "Commit SHA: ${{ github.sha }}"
-#           echo "Repository: ${{ github.repository }}"
+      - name: Show Trigger Information
+        run: |
+          echo "Pipeline Triggered!"
+          echo "Source Branch (PR From): ${{ github.head_ref }}"
+          echo "Target Branch (PR To): ${{ github.base_ref }}"
+          echo "Commit SHA: ${{ github.sha }}"
+          echo "Repository: ${{ github.repository }}"
 
-#       - name: Set up Node.js
-#         uses: actions/setup-node@v4
-#         with:
-#           node-version: 20
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
-#       - name: Install dependencies
-#         run: npm install
+      - name: Install dependencies
+        run: npm install
       
-#       - name: Run Lint
-#         run: npm run lint
+      # - name: Run Lint
+      #   run: npm run lint
 
-#       - name: Run tests
-#         run: npm test
+      - name: Run tests
+        run: npm test
 
-#       - name: Build project
-#         run: npm run build
+      - name: Build project
+        run: npm run build
 
-#       - name: List build output (debug)
-#         run: ls -R
+      - name: List build output (debug)
+        run: ls -R
 
 #   sonarqube:
 #     name: SonarQube Scan and Quality Gate
@@ -80,92 +80,3 @@
 
 # # done 
 # #  new done
-
-
-# for client repo
-name: CI Pipeline
-
-on:
-  pull_request:
-    branches:
-      - main
-      - release
-
-jobs:
-  lint:
-    name: Run Lint Checks
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install flake8
-        run: |
-          python -m pip install --upgrade pip
-          pip install flake8
-
-      - name: Run flake8
-        run: |
-          flake8 clients/felix
-
-  test:
-    name: Run Tests
-    runs-on: ubuntu-latest
-    needs: lint
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r clients/felix/requirements.txt
-
-      # Add your test command here
-      # - name: Run Tests
-      #   run: pytest
-
-  sonarqube:
-    name: SonarQube Scan and Quality Gate
-    runs-on: ubuntu-latest
-    needs: test
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Run SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v6
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        with:
-          projectBaseDir: clients/felix
-          args: >
-            -Dsonar.projectKey=Frontend-Application
-
-      - name: Debug Sonar Files
-        run: |
-          find . -name "report-task.txt"
-
-      - name: Check SonarQube Quality Gate
-        uses: SonarSource/sonarqube-quality-gate-action@v1
-        with:
-          scanMetadataReportFile: clients/felix/.scannerwork/report-task.txt
-        timeout-minutes: 10
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
