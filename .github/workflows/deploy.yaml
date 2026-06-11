@@ -140,3 +140,13 @@ jobs:
           echo "Deployment completed successfully"
 
 
+#  # - name: Notify Slack about deployment status
+  #   if: failure()
+  #   uses: slackapi/slack-github-action@v1.23.0
+  #   with:
+  #     payload: |
+  #       {
+  #         "text": "Frontend deployment failed for commit `${{ github.sha }}` on branch `${{ github.ref_name }}`. Please check the logs for details."
+  #       }
+  #     channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
+  #     bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
