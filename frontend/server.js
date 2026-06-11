@@ -5,8 +5,10 @@ const fs = require('node:fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Use LOG_DIR from environment if provided
+const logsDir = process.env.LOG_DIR || path.join(__dirname, 'logs');
+
 // Create logs directory if it doesn't exist
-const logsDir = path.join(__dirname, 'logs');
 fs.mkdirSync(logsDir, { recursive: true });
 
 const logFile = path.join(logsDir, 'app.log');
@@ -35,6 +37,7 @@ app.use(express.static(__dirname));
 // Health check endpoint
 app.get('/health', (req, res) => {
     console.log('Health check endpoint called');
+
     res.status(200).json({
         status: 'healthy'
     });
@@ -43,6 +46,7 @@ app.get('/health', (req, res) => {
 // Home page
 app.get('/', (req, res) => {
     console.log('Home page requested');
+
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
@@ -58,4 +62,5 @@ app.use((err, req, res, next) => {
 // Start server
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+    console.log(`Log file: ${logFile}`);
 });
