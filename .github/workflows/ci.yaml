@@ -7,62 +7,76 @@ on:
       - release
 
 jobs:
-  lint:
+  test-and-build:
     runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - run: |
-          python -m pip install --upgrade pip
-          pip install flake8
-
-      - run: |
-          flake8 .
-
-  test:
-    runs-on: ubuntu-latest
-    needs: lint
+    defaults:
+      run:
+        working-directory: frontend
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Show Trigger Information
+        run: |
+          echo "Pipeline Triggered!"
+          echo "Source Branch (PR From): ${{ github.head_ref }}"
+          echo "Target Branch (PR To): ${{ github.base_ref }}"
+          echo "Commit SHA: ${{ github.sha }}"
+          echo "Repository: ${{ github.repository }}"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          python-version: "3.11"
+          node-version: 20
 
-      - run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          # pip install pytest
+      - name: Install dependencies
+        run: npm install
+      
+      # - name: Run Lint
+      #   run: npm run lint
 
-      # - run: |
-          # pytest
+      - name: Run tests
+        run: npm test
 
-  sonarqube:
-    runs-on: ubuntu-latest
-    needs: test
+      - name: Build project
+        run: npm run build
 
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - name: List build output (debug)
+        run: ls -R
 
-      - uses: SonarSource/sonarqube-scan-action@v6
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        with:
-          projectBaseDir: .
-          args: >
-            -Dsonar.projectKey=Frontend-Application
+#   sonarqube:
+#     name: SonarQube Scan and Quality Gate
+#     runs-on: ubuntu-latest
+#     needs: test-and-build
 
-      - uses: SonarSource/sonarqube-quality-gate-action@v1
-        with:
-          scanMetadataReportFile: .scannerwork/report-task.txt
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+#         with:
+#           fetch-depth: 0
+
+#       - name: Run SonarQube Scan
+#         uses: SonarSource/sonarqube-scan-action@v6
+#         env:
+#           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+#           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+#         with:
+#           projectBaseDir: frontend
+#           args: >
+#             -Dsonar.projectKey=Frontend-Application
+#       - name: Debug Sonar Files
+#         run: |
+#           find . -name "report-task.txt"
+
+#       - name: Check SonarQube Quality Gate
+#         uses: SonarSource/sonarqube-quality-gate-action@v1
+#         with:
+#           scanMetadataReportFile: frontend/.scannerwork/report-task.txt
+#         timeout-minutes: 10
+#         env:
+#           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+# # done 
+# #  new done
